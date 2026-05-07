@@ -1,0 +1,45 @@
+{
+  "name": "codex-litellm-bridge",
+  "version": "0.1.0",
+  "description": "Install and manage a LiteLLM-backed Codex model bridge with in-session custom model switching.",
+  "author": {
+    "name": "Local Codex LiteLLM Bridge",
+    "email": "support@example.local",
+    "url": "https://example.local/codex-litellm-bridge"
+  },
+  "homepage": "https://example.local/codex-litellm-bridge",
+  "repository": "https://example.local/codex-litellm-bridge",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "litellm",
+    "model-switching",
+    "windows",
+    "custom-models"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex LiteLLM Bridge",
+    "shortDescription": "Route Codex through LiteLLM and expose custom models in /model.",
+    "longDescription": "Codex LiteLLM Bridge installs a local LiteLLM proxy, writes Codex model-provider configuration, generates a model_catalog.json with custom model entries, and registers a Windows scheduled task so Codex can switch custom models inside a running conversation.",
+    "developerName": "Local Codex LiteLLM Bridge",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://example.local/codex-litellm-bridge",
+    "privacyPolicyURL": "https://example.local/privacy",
+    "termsOfServiceURL": "https://example.local/terms",
+    "defaultPrompt": [
+      "Use $codex-litellm-bridge to install the Windows LiteLLM bridge.",
+      "Use $codex-litellm-bridge to add a custom Codex model.",
+      "Use $codex-litellm-bridge to check LiteLLM bridge status."
+    ],
+    "brandColor": "#2563EB",
+    "composerIcon": "./assets/codex-litellm-bridge.svg",
+    "logo": "./assets/codex-litellm-bridge.svg",
+    "screenshots": []
+  }
+}

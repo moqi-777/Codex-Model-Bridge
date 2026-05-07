@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex LiteLLM Bridge"
+  short_description: "Install and manage Codex custom model routing through LiteLLM"
+  default_prompt: "Use $codex-litellm-bridge to set up Codex so /model can switch custom LiteLLM-routed models inside the same session."

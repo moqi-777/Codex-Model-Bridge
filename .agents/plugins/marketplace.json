@@ -1,0 +1,20 @@
+{
+  "name": "local-codex-litellm-bridge",
+  "interface": {
+    "displayName": "Local Codex LiteLLM Bridge"
+  },
+  "plugins": [
+    {
+      "name": "codex-litellm-bridge",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex-litellm-bridge"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Coding"
+    }
+  ]
+}

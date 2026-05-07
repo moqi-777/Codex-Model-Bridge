@@ -1,0 +1,45 @@
+# Local install output
+.codex-litellm-bridge/
+validation-tmp/
+install/
+logs/
+
+# Logs
+*.log
+*.log.*
+litellm-startup.log
+litellm-error.log
+service.log
+debug.log
+
+# Backups and generated local configs
+*.bak
+*.bak.*
+config.toml.bak.*
+model_catalog.json.bak.*
+
+# Secrets and local env files
+.env
+.env.*
+*.secret
+*.secrets
+secrets.*
+*api-key*
+*apikey*
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# Git worktrees or packaged archives
+*.zip
+*.7z
+*.tar
+*.tar.gz

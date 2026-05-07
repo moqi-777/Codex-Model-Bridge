@@ -1,0 +1,6 @@
+interface:
+  display_name: "Codex LiteLLM Bridge"
+  short_description: "Install and manage LiteLLM-backed custom Codex models"
+  default_prompt: "Use $codex-litellm-bridge to install LiteLLM, register custom models, enable autostart, and make /model switching work in Codex."
+  icon_small: "./assets/codex-litellm-bridge.svg"
+  icon_large: "./assets/codex-litellm-bridge.svg"
