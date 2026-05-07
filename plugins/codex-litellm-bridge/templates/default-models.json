@@ -101,6 +101,30 @@
       "api_base": "https://www.dale-ai.top/v1",
       "api_key_env": "DALE_API_KEY",
       "catalog_visible": true
+    },
+    {
+      "name": "mimo-v2.5-pro",
+      "display_name": "MiMo v2.5 Pro",
+      "description": "Xiaomi MiMo v2.5 Pro - 1M context window, advanced reasoning.",
+      "upstream_model": "openai/mimo-v2.5-pro",
+      "api_base": "https://token-plan-cn.xiaomimimo.com/v1",
+      "api_key_env": "MIMO_API_KEY",
+      "use_chat_completions_api": true,
+      "stream_timeout": 300,
+      "max_retries": 2,
+      "catalog_visible": true
+    },
+    {
+      "name": "mimo-v2.5",
+      "display_name": "MiMo v2.5",
+      "description": "Xiaomi MiMo v2.5 fast reasoning model.",
+      "upstream_model": "openai/mimo-v2.5",
+      "api_base": "https://token-plan-cn.xiaomimimo.com/v1",
+      "api_key_env": "MIMO_API_KEY",
+      "use_chat_completions_api": true,
+      "stream_timeout": 300,
+      "max_retries": 2,
+      "catalog_visible": true
     }
   ]
 }

@@ -29,13 +29,13 @@
 把仓库克隆到目标电脑，例如：
 
 ```powershell
-git clone <repo-url> D:\AI\codex-litellm-plugin-marketplace
+git clone https://github.com/moqi-777/Codex-Model-Bridge D:\AI\正在开发中\Codex-Model-Bridge
 ```
 
 添加到 Codex：
 
 ```powershell
-codex plugin marketplace add "D:\AI\codex-litellm-plugin-marketplace"
+codex plugin marketplace add "D:\AI\正在开发中\Codex-Model-Bridge"
 ```
 
 然后在 Codex 插件入口安装 `Codex LiteLLM Bridge`。如果当前 Codex 版本没有图形化安装入口，也可以直接使用插件目录里的脚本。
@@ -45,7 +45,7 @@ codex plugin marketplace add "D:\AI\codex-litellm-plugin-marketplace"
 进入插件目录：
 
 ```powershell
-Set-Location "D:\AI\codex-litellm-plugin-marketplace\plugins\codex-litellm-bridge"
+Set-Location "D:\AI\正在开发中\Codex-Model-Bridge\plugins\codex-litellm-bridge"
 ```
 
 推荐安装到独立路径：
@@ -60,10 +60,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\codex-litellm-bridge.ps1 `
   -AixorApiKey "sk-你的-AIXOR-key" `
   -ArkApiKey "你的-火山-ARK-key" `
   -MiniMaxApiKey "sk-你的-MiniMax-key" `
-  -DaleApiKey "sk-你的-Dale-key"
+  -DaleApiKey "sk-你的-Dale-key" `
+  -MimoApiKey "你的-MiMo-key"
 ```
 
-脚本会备份已有 Codex `config.toml`，再写入新的 LiteLLM provider 配置。真实 API key 会写入用户环境变量，不会写进脚本文件。
+脚本会备份已有 Codex `config.toml`，再写入新的 LiteLLM provider 配置。真实 API key 会写入用户环境变量，不会写进脚本文件；LiteLLM 启动脚本会在进程启动时从用户环境变量加载所需 key。
 
 完整使用说明见：
 

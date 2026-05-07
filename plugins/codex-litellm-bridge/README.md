@@ -24,13 +24,14 @@
 - LiteLLM `merge_system.py`
 - 用户环境变量里的 API key
 - Windows 计划任务 `Codex-LiteLLM-Bridge`
+- Windows 计划任务 XML `Codex-LiteLLM-Bridge-Task.xml`
 
-脚本写 Codex 配置前会备份已有 `config.toml`。
+脚本写 Codex 配置前会备份已有 `config.toml`。脚本不会把真实 API key 写进启动脚本；启动脚本会从用户环境变量加载 key 并注入 LiteLLM 进程。
 
 ## 插件目录结构
 
 ```text
-codex-litellm-plugin-marketplace/
+Codex-Model-Bridge/
 ├─ .agents/plugins/marketplace.json
 └─ plugins/codex-litellm-bridge/
    ├─ .codex-plugin/plugin.json
@@ -46,16 +47,16 @@ codex-litellm-plugin-marketplace/
 
 ## 1. 安装插件 marketplace
 
-把整个 `codex-litellm-plugin-marketplace` 目录放到朋友电脑任意位置，例如：
+把整个 `Codex-Model-Bridge` 目录放到目标电脑任意位置，例如：
 
 ```text
-D:\AI\codex-litellm-plugin-marketplace
+D:\AI\正在开发中\Codex-Model-Bridge
 ```
 
 然后添加本地 marketplace：
 
 ```powershell
-codex plugin marketplace add "D:\AI\codex-litellm-plugin-marketplace"
+codex plugin marketplace add "D:\AI\正在开发中\Codex-Model-Bridge"
 ```
 
 如果 Codex UI 里有插件安装入口，也可以从这个 marketplace 里安装 `Codex LiteLLM Bridge`。
@@ -87,7 +88,7 @@ uv tool install "litellm[proxy]"
 进入插件目录：
 
 ```powershell
-Set-Location "D:\AI\codex-litellm-plugin-marketplace\plugins\codex-litellm-bridge"
+Set-Location "D:\AI\正在开发中\Codex-Model-Bridge\plugins\codex-litellm-bridge"
 ```
 
 执行安装：
@@ -99,7 +100,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\codex-litellm-bridge.ps1 `
   -AixorApiKey "sk-你的-AIXOR-key" `
   -ArkApiKey "你的-火山-ARK-key" `
   -MiniMaxApiKey "sk-你的-MiniMax-key" `
-  -DaleApiKey "sk-你的-Dale-key"
+  -DaleApiKey "sk-你的-Dale-key" `
+  -MimoApiKey "你的-MiMo-key"
 ```
 
 默认安装位置：
@@ -134,7 +136,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\codex-litellm-bridge.ps1 `
   -AixorApiKey "sk-你的-AIXOR-key" `
   -ArkApiKey "你的-火山-ARK-key" `
   -MiniMaxApiKey "sk-你的-MiniMax-key" `
-  -DaleApiKey "sk-你的-Dale-key"
+  -DaleApiKey "sk-你的-Dale-key" `
+  -MimoApiKey "你的-MiMo-key"
 ```
 
 参数含义：
@@ -168,8 +171,10 @@ templates/default-models.json
 - `gpt-5.3-codex`
 - `gpt-5.2`
 - `doubao-code`
-- `minimax-m2.7-highspeed`
 - `dale-gpt-5.4`
+- `minimax-m2.7-highspeed`
+- `mimo-v2.5-pro`
+- `mimo-v2.5`
 
 其中 `gpt-5.5-fallback-54` 和 `gpt-5.5-fallback-53codex` 是 fallback 路由，默认不显示在 Codex `/model` 列表里。
 
@@ -274,6 +279,13 @@ gpt-5.5
 ```text
 Codex-LiteLLM-Bridge
 ```
+
+计划任务通过 XML 导入创建，避免 `schtasks /Create /TR ...` 的嵌套引号问题，并显式设置：
+
+- `ExecutionTimeLimit = PT0S`：不被 Windows 默认 72 小时限制终止。
+- `DisallowStartIfOnBatteries = false`：电池供电时允许启动。
+- `StopIfGoingOnBatteries = false`：切换到电池供电时不停止。
+- `MultipleInstancesPolicy = IgnoreNew`：避免重复实例。
 
 手动启用：
 

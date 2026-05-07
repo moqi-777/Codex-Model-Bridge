@@ -1,14 +1,14 @@
 {
   "name": "codex-litellm-bridge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Install and manage a LiteLLM-backed Codex model bridge with in-session custom model switching.",
   "author": {
-    "name": "Local Codex LiteLLM Bridge",
-    "email": "support@example.local",
-    "url": "https://example.local/codex-litellm-bridge"
+    "name": "moqi-777",
+    "email": "moqi-777@users.noreply.github.com",
+    "url": "https://github.com/moqi-777/Codex-Model-Bridge"
   },
-  "homepage": "https://example.local/codex-litellm-bridge",
-  "repository": "https://example.local/codex-litellm-bridge",
+  "homepage": "https://github.com/moqi-777/Codex-Model-Bridge",
+  "repository": "https://github.com/moqi-777/Codex-Model-Bridge",
   "license": "MIT",
   "keywords": [
     "codex",
@@ -22,16 +22,16 @@
     "displayName": "Codex LiteLLM Bridge",
     "shortDescription": "Route Codex through LiteLLM and expose custom models in /model.",
     "longDescription": "Codex LiteLLM Bridge installs a local LiteLLM proxy, writes Codex model-provider configuration, generates a model_catalog.json with custom model entries, and registers a Windows scheduled task so Codex can switch custom models inside a running conversation.",
-    "developerName": "Local Codex LiteLLM Bridge",
+    "developerName": "moqi-777",
     "category": "Coding",
     "capabilities": [
       "Interactive",
       "Read",
       "Write"
     ],
-    "websiteURL": "https://example.local/codex-litellm-bridge",
-    "privacyPolicyURL": "https://example.local/privacy",
-    "termsOfServiceURL": "https://example.local/terms",
+    "websiteURL": "https://github.com/moqi-777/Codex-Model-Bridge",
+    "privacyPolicyURL": "https://github.com/moqi-777/Codex-Model-Bridge#安全说明",
+    "termsOfServiceURL": "https://github.com/moqi-777/Codex-Model-Bridge#license",
     "defaultPrompt": [
       "Use $codex-litellm-bridge to install the Windows LiteLLM bridge.",
       "Use $codex-litellm-bridge to add a custom Codex model.",

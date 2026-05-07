@@ -5,6 +5,7 @@ param(
 
     [string]$InstallRoot = (Join-Path $env:USERPROFILE ".codex-litellm-bridge"),
     [string]$CodexHome = "",
+    [ValidateRange(1, 65535)]
     [int]$Port = 4000,
     [string]$DefaultModel = "",
     [bool]$EnableAutostart = $true,
@@ -15,6 +16,7 @@ param(
     [string]$ArkApiKey = "",
     [string]$MiniMaxApiKey = "",
     [string]$DaleApiKey = "",
+    [string]$MimoApiKey = "",
 
     [string]$Name = "",
     [string]$DisplayName = "",
@@ -40,6 +42,22 @@ function Ensure-Dir([string]$Path) {
     New-Item -ItemType Directory -Force -Path $Path | Out-Null
 }
 
+function Assert-Slug([string]$Value, [string]$ParamName) {
+    if (!$Value -or $Value -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+        throw "$ParamName must be 1-128 characters and contain only letters, numbers, dots, underscores, or hyphens."
+    }
+}
+
+function Assert-EnvName([string]$Value, [string]$ParamName) {
+    if (!$Value -or $Value -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
+        throw "$ParamName must be a valid environment variable name."
+    }
+}
+
+function Test-CommandExists([string]$Name) {
+    return [bool](Get-Command $Name -ErrorAction SilentlyContinue)
+}
+
 function Resolve-CodexHome {
     if ($CodexHome) { return $CodexHome }
     if ($env:CODEX_HOME) { return $env:CODEX_HOME }
@@ -57,6 +75,7 @@ function Get-Paths {
         LiteLLMConfig = Join-Path (Join-Path $InstallRoot "litellm") "config.yaml"
         MergeHook = Join-Path (Join-Path $InstallRoot "litellm") "merge_system.py"
         StartScript = Join-Path $InstallRoot "start-litellm.ps1"
+        AutostartXml = Join-Path $InstallRoot "Codex-LiteLLM-Bridge-Task.xml"
         CodexConfig = Join-Path $resolvedCodexHome "config.toml"
         CatalogPath = Join-Path $resolvedCodexHome "model_catalog.json"
     }
@@ -79,6 +98,7 @@ function Save-Registry($Registry) {
 
 function Set-UserEnvIfPresent([string]$Key, [string]$Value) {
     if ($Value) {
+        Assert-EnvName $Key "Environment variable name"
         [Environment]::SetEnvironmentVariable($Key, $Value, "User")
         Set-Item -Path "Env:$Key" -Value $Value
     }
@@ -86,6 +106,13 @@ function Set-UserEnvIfPresent([string]$Key, [string]$Value) {
 
 function Quote-Yaml([string]$Value) {
     return '"' + $Value.Replace('\', '\\').Replace('"', '\"') + '"'
+}
+
+function Get-ModelEnvNames {
+    $registry = Get-Registry
+    $names = @("LITELLM_API_KEY")
+    $names += @($registry.models | Where-Object { $_.api_key_env } | Select-Object -ExpandProperty api_key_env)
+    return @($names | Where-Object { $_ } | Select-Object -Unique)
 }
 
 function Write-LiteLLMConfig {
@@ -242,32 +269,102 @@ wire_api = "responses"
 
 function Write-StartScript {
     $paths = Get-Paths
+    $envLoadLines = @(
+        Get-ModelEnvNames | ForEach-Object {
+            "Set-EnvFromUser ""$_"""
+        }
+    ) -join [Environment]::NewLine
     Ensure-Dir $paths.InstallRoot
     Ensure-Dir $paths.LogsDir
     $script = @"
 param([switch]`$ForceStopLiteLLM)
 `$ErrorActionPreference = "Stop"
-Start-Sleep -Seconds 3
+Start-Sleep -Seconds 30
 `$logFile = "$($paths.LogsDir)\litellm-startup.log"
 Add-Content -Path `$logFile -Value "`n[`$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] Starting LiteLLM on port $Port"
+
+function Set-EnvFromUser([string]`$Name) {
+    if ([Environment]::GetEnvironmentVariable(`$Name, "Process")) { return }
+    `$value = [Environment]::GetEnvironmentVariable(`$Name, "User")
+    if (`$value) {
+        Set-Item -Path "Env:`$Name" -Value `$value
+    }
+}
+
+$envLoadLines
+
 `$portInUse = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
 if (`$portInUse -and `$ForceStopLiteLLM) {
     Get-Process -Name "litellm" -ErrorAction SilentlyContinue | Stop-Process -Force
     Start-Sleep -Seconds 2
 }
 Set-Location "$($paths.LitellmDir)"
-`$litellmCommand = Get-Command litellm -ErrorAction SilentlyContinue
-if (`$litellmCommand) {
+`$commonLitellm = Join-Path `$env:USERPROFILE ".local\bin\litellm.exe"
+if (Test-Path `$commonLitellm) {
+    `$processFile = `$commonLitellm
+    `$processArgs = @("--config", "$($paths.LiteLLMConfig)", "--port", "$Port")
+} elseif ((`$litellmCommand = Get-Command litellm -ErrorAction SilentlyContinue)) {
     `$processFile = `$litellmCommand.Source
     `$processArgs = @("--config", "$($paths.LiteLLMConfig)", "--port", "$Port")
-} else {
+} elseif (Get-Command uv -ErrorAction SilentlyContinue) {
     `$processFile = "uv"
     `$processArgs = @("tool", "run", "litellm", "--config", "$($paths.LiteLLMConfig)", "--port", "$Port")
+} else {
+    throw "Neither litellm nor uv was found in PATH. Install LiteLLM first."
 }
 Start-Process -FilePath `$processFile -ArgumentList `$processArgs -WindowStyle Hidden -RedirectStandardOutput "$($paths.LogsDir)\litellm.log" -RedirectStandardError "$($paths.LogsDir)\litellm-error.log"
 "@
     $script | Set-Content -LiteralPath $paths.StartScript -Encoding UTF8
     Write-Step "Wrote LiteLLM start script: $($paths.StartScript)"
+}
+
+function Write-AutostartXml {
+    $paths = Get-Paths
+    Ensure-Dir $paths.InstallRoot
+    $arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($paths.StartScript)`" -ForceStopLiteLLM"
+    $escapedArguments = [Security.SecurityElement]::Escape($arguments)
+    $xml = @"
+<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>Start LiteLLM for Codex custom model switching.</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+    </LogonTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>false</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>powershell.exe</Command>
+      <Arguments>$escapedArguments</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"@
+    $xml | Set-Content -LiteralPath $paths.AutostartXml -Encoding Unicode
+    Write-Step "Wrote scheduled task XML: $($paths.AutostartXml)"
 }
 
 function Sync-Bridge {
@@ -280,11 +377,9 @@ function Sync-Bridge {
 function Enable-Autostart {
     $paths = Get-Paths
     Write-StartScript
-    $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$($paths.StartScript)`" -ForceStopLiteLLM"
-    $trigger = New-ScheduledTaskTrigger -AtLogOn
-    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -Description "Start LiteLLM for Codex custom model switching." -Force | Out-Null
-    Write-Step "Registered scheduled task: $TaskName"
+    Write-AutostartXml
+    schtasks.exe /Create /TN $TaskName /XML $paths.AutostartXml /F | Out-Null
+    Write-Step "Registered scheduled task from XML: $TaskName"
 }
 
 function Disable-Autostart {
@@ -313,15 +408,33 @@ function Show-Status {
     Write-Host "Port:        $Port"
     $listen = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
     Write-Host "Listening:   $([bool]$listen)"
+    Write-Host "LiteLLM cfg: $([bool](Test-Path $paths.LiteLLMConfig)) $($paths.LiteLLMConfig)"
+    Write-Host "Task XML:    $([bool](Test-Path $paths.AutostartXml)) $($paths.AutostartXml)"
+    Write-Host "Codex cfg:   $([bool](Test-Path $paths.CodexConfig)) $($paths.CodexConfig)"
+    Write-Host "Catalog:     $([bool](Test-Path $paths.CatalogPath)) $($paths.CatalogPath)"
+    Write-Host "Autostart:   $([bool](Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue)) $TaskName"
     if (Test-Path $paths.ModelsPath) {
         $registry = Get-Registry
         Write-Host "Models:      $((@($registry.models | Where-Object { $_.catalog_visible -ne $false }).name) -join ', ')"
+        $missingEnv = @($registry.models | Where-Object {
+            $_.api_key_env -and
+            -not [Environment]::GetEnvironmentVariable($_.api_key_env, "User") -and
+            -not [Environment]::GetEnvironmentVariable($_.api_key_env, "Process")
+        } | Select-Object -ExpandProperty api_key_env -Unique)
+        if ($missingEnv.Count -gt 0) {
+            Write-Host "Missing env: $($missingEnv -join ', ')"
+        }
     }
 }
 
 function Add-Model {
     if (!$Name -or !$UpstreamModel -or !$ApiBase -or !$ApiKeyEnv) {
         throw "add-model requires -Name, -UpstreamModel, -ApiBase, and -ApiKeyEnv."
+    }
+    Assert-Slug $Name "-Name"
+    Assert-EnvName $ApiKeyEnv "-ApiKeyEnv"
+    if ($ApiBase -notmatch '^https?://') {
+        throw "-ApiBase must start with http:// or https://."
     }
     $registry = Get-Registry
     $existing = @($registry.models | Where-Object { $_.name -eq $Name })[0]
@@ -349,6 +462,7 @@ function Add-Model {
 
 function Remove-Model {
     if (!$Name) { throw "remove-model requires -Name." }
+    Assert-Slug $Name "-Name"
     $registry = Get-Registry
     $registry.models = @($registry.models | Where-Object { $_.name -ne $Name })
     Save-Registry $registry
@@ -373,12 +487,16 @@ function Install-Bridge {
     Set-UserEnvIfPresent "ARK_API_KEY" $ArkApiKey
     Set-UserEnvIfPresent "MINIMAX_API_KEY" $MiniMaxApiKey
     Set-UserEnvIfPresent "DALE_API_KEY" $DaleApiKey
+    Set-UserEnvIfPresent "MIMO_API_KEY" $MimoApiKey
     if (![Environment]::GetEnvironmentVariable("LITELLM_API_KEY", "User")) {
         [Environment]::SetEnvironmentVariable("LITELLM_API_KEY", "sk-local-anything", "User")
         $env:LITELLM_API_KEY = "sk-local-anything"
     }
 
     if ($InstallLiteLLM) {
+        if (!(Test-CommandExists "uv")) {
+            throw "uv is required for -InstallLiteLLM but was not found in PATH. Install uv first or rerun without -InstallLiteLLM."
+        }
         Write-Step "Installing LiteLLM with uv."
         uv tool install "litellm[proxy]"
     }

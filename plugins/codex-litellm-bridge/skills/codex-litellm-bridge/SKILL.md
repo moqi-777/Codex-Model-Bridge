@@ -10,13 +10,13 @@ Use this skill to install or manage the bundled Windows bridge. The bridge has f
 - Codex config points one provider named `litellm` at `http://localhost:<port>/v1`.
 - LiteLLM maps model names such as `gpt-5.5`, `doubao-code`, and custom slugs to upstream OpenAI-compatible APIs.
 - `model_catalog.json` registers those slugs with `visibility = list`, which makes `/model` show them and allows switching inside the current Codex session.
-- A Windows scheduled task starts LiteLLM at logon so plain `codex` works after reboot.
+- A Windows scheduled task starts LiteLLM at logon so plain `codex` works after reboot. The task is registered from XML so it can disable the default 72-hour execution timeout and battery restrictions.
 
 ## Safety
 
 Do not run the installer on the current machine unless the user explicitly asks. The installer intentionally writes Codex config, model catalog, LiteLLM config, user environment variables, and a scheduled task on the target machine.
 
-The installer backs up an existing `config.toml` before replacing it. It does not write API keys into script files; it stores provided keys as user environment variables.
+The installer backs up an existing `config.toml` before replacing it. It does not write API keys into script files; it stores provided keys as user environment variables and the generated LiteLLM start script loads them into the LiteLLM process environment.
 
 ## Main Script
 
@@ -31,7 +31,7 @@ Common actions:
 ```powershell
 # Install with default model set and LiteLLM autostart.
 powershell -ExecutionPolicy Bypass -File .\scripts\codex-litellm-bridge.ps1 -Action install -InstallLiteLLM `
-  -AixorApiKey "sk-..." -ArkApiKey "..." -MiniMaxApiKey "..." -DaleApiKey "..."
+  -AixorApiKey "sk-..." -ArkApiKey "..." -MiniMaxApiKey "..." -DaleApiKey "..." -MimoApiKey "..."
 
 # Show bridge status.
 powershell -ExecutionPolicy Bypass -File .\scripts\codex-litellm-bridge.ps1 -Action status
